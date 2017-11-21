@@ -102,23 +102,115 @@ var BAG_OF_LETTERS = [
 ];
 
 var YOUR_HAND = new Array();
+var maxScore = -1;
+var word = "";
 var SCORE = 0;
 function startGame() {
 	addNumbersFromBag();
 	displayHand();
-	
+
 };
 
+function isExit(wordarray, left, index) {
+	var key = wordarray[index];
+	for (var i = left; i < index; i++) {
+		if (key == wordarray[i]) {
+			return true;
+		}
+	}
+	return false;
+}
 
+function Swap(wordarray, i, j) {
+	var temp = wordarray[i];
+	wordarray[i] = wordarray[j];
+	wordarray[j] = temp;
+}
+
+function CheckTheWordWhenHasUnderline(wordarray, string, num) {
+	if (num == 1) {
+		for (var i = 0; i < string.length; i++) {
+			if (string[i] == '_') {
+				//console.log(string);
+				for (var ii = 0; ii < 26; ii++) {
+					string = string.split('');
+					string.splice(i, 1, String.fromCharCode(65 + ii));
+					string = string.join('');
+					//console.log(string);
+					CheckTheWord(wordarray, string);
+				}
+			}
+		}
+	}
+	else {
+		for (var i = 0; i < string.length; i++) {
+			if (string[i] == '_') {
+				for (var ii = 0; ii < 26; ii++) {
+					string[i] = 'a' + ii;
+					CheckTheWordWhenHasUnderline(wordarray, string, num - 1);
+				}
+			}
+		}
+	}
+}
+
+function CheckTheWord(wordarray, string) {
+	if (isThisAWord(string)) {
+		var s = 0;
+		for (var i = 0; i < wordarray.length; i++) {
+			s += wordarray[i].pointsWhenLettersUsed;
+		}
+		if (s > maxScore) {
+			word = string;
+			maxScore = s;
+		}
+	}
+}
+
+function AllArrange(wordarray, left, right) {
+	if (left == right) {
+		var string = "";
+		var num = 0;
+		for (var i = 0; i < wordarray.length; i++) {
+			string += wordarray[i].letter;
+			if (wordarray[i].letter == '_') {
+				num++;
+			}
+		}
+		if (num > 0) {
+			CheckTheWordWhenHasUnderline(wordarray, string, num);
+			return;
+		}
+		CheckTheWord(wordarray, string);
+	}
+	else {
+		for (var i = left; i <= right; i++) {
+			if (!isExit(wordarray, left, i)) {
+				Swap(wordarray, left, i);
+				AllArrange(wordarray, left + 1, right);
+
+				if (right >= 1 && left == 0) {
+					var arraystring = JSON.stringify(wordarray);
+					var newwordarray = JSON.parse(arraystring);
+					newwordarray.shift();
+					//console.log(right);
+					AllArrange(newwordarray, 0, right - 1);
+				}
+
+				Swap(wordarray, left, i);
+			}
+
+		}
+	}
+}
 
 function addNumbersFromBag(){
 	console.log("your hand has:" + YOUR_HAND.length);
 	for(i=YOUR_HAND.length; i < 7; i++){
 		YOUR_HAND[i] = getAvailableLetter();
 	}
-	
-}
 
+}
 
 function displayHand(){
 	console.log("your hand has:" + YOUR_HAND.length);
@@ -127,18 +219,16 @@ function displayHand(){
 		console.log("#letter-" + (i+1) +" set to " + YOUR_HAND[i].letter);
 		$( "#letter-" + (i+1)).addClass("letter-" + YOUR_HAND[i].letter);
 		$( "#points-" + (i+1)).addClass("points-" + YOUR_HAND[i].pointsWhenLettersUsed);
-		
-		
-		
-		
+
+
+
+
 		$( "#letter-" + (i+1)).html(YOUR_HAND[i].letter);
-		
+
 		$( "#points-" + (i+1)).html(YOUR_HAND[i].pointsWhenLettersUsed);
 	}
-	
+
 }
-
-
 
 function getAvailableLetter(){
 	var randomIndex = Math.floor(Math.random() * BAG_OF_LETTERS.length);
@@ -147,13 +237,33 @@ function getAvailableLetter(){
 	return randomLetter[0];
 }
 
+function findWordToUse() {
+	//TODO Your job starts here.
+	//alert("Your code needs to go here");
+	var string = JSON.stringify(YOUR_HAND);//序列化
+	var wordarray = JSON.parse(string);
 
-function findWordToUse(){
- //TODO Your job starts here.
-	alert("Your code needs to go here");	
+	AllArrange(wordarray, 0, wordarray.length - 1);
+
+	if (maxScore > -1) {
+		console.log("max=" + word);
+		if (haveLettersForWord(word)) {
+			successfullyAddedWord(word);
+		}
+		else {
+			alert("It is a bug!");//for test
+		}
+	}
+	else {
+		alert("Maybe there is no words!");
+		retireHand();
+	}
+	maxScore = -1;
+	word = "";
 }
+
 function humanFindWordToUse(){
-	
+
 	 var humanFoundWord = $( "#human-word-input").val();
 	 console.log("Checking human workd of:" + humanFoundWord);
 	 if(isThisAWord(humanFoundWord)){
@@ -165,9 +275,8 @@ function humanFindWordToUse(){
 	 }else{
 		 alert(humanFoundWord + " is not a valid word.");
 	 }
-		
-}
 
+}
 
 function successfullyAddedWord(foundWord){
 	$( "#word-history-list").append("<li>" + foundWord + "</li>");
@@ -176,7 +285,7 @@ function successfullyAddedWord(foundWord){
 	addNumbersFromBag();
 	displayHand();
 	$( "#human-word-input").val('');
-	
+
 }
 
 function addToScore(letterToAddToScore){
@@ -185,9 +294,8 @@ function addToScore(letterToAddToScore){
 	$( "#score-number").html(SCORE);
 }
 
-
 function takeOutUsedLetters(){
-	
+
 	for(ii=0; ii < YOUR_HAND.length; ii++){
 		if(YOUR_HAND[ii].used){
 			addToScore(YOUR_HAND[ii]);
@@ -197,7 +305,7 @@ function takeOutUsedLetters(){
 			console.log(YOUR_HAND[ii].letter + "<- Not Used");
 		}
 	}
-	
+
 }
 
 function haveLettersForWord(aProposedWord){
@@ -206,31 +314,43 @@ function haveLettersForWord(aProposedWord){
 	for (i = 0; i < wordAsArray.length; i++) {
 		var foundLetter = false;
 		console.log(wordAsArray[i] + "<-For match");
+
+		var COULD_USE_UNDERLINE_LOCATION = -1;
+
 		for(ii=0; ii<YOUR_HAND.length; ii++){
 			console.log("              " + YOUR_HAND[ii].letter + "<-Checking");
-			if(YOUR_HAND[ii].letter == wordAsArray [i]){
+			if (YOUR_HAND[ii].letter == '_' && !YOUR_HAND[ii].used) {// find the _
+				COULD_USE_UNDERLINE_LOCATION = ii;
+			}
+			if (YOUR_HAND[ii].letter == wordAsArray[i]) {
 				if(!YOUR_HAND[ii].used && !foundLetter){
 					console.log("     " + YOUR_HAND[ii].letter + "<-Found");
+
 					YOUR_HAND[ii].used = true;
 					foundLetter = true;
-					
+					break;//add for avoiding useless loop
 				}
+		  }
+	  }
+
+		if(!foundLetter &&  COULD_USE_UNDERLINE_LOCATION>-1){
+			if (!YOUR_HAND[COULD_USE_UNDERLINE_LOCATION].used) {
+				console.log("     " + wordAsArray[i] + "<-Found by _");
+				YOUR_HAND[COULD_USE_UNDERLINE_LOCATION].used = true;
+				foundLetter = true;
+		  }
+	  }
+	  if (!foundLetter) {
+				resetHand();
+				return false;
 			}
 		}
-		
-		
-		if(!foundLetter){
-			resetHand();
-			return false;
-		}
-	}
-	
+
 	return true;
 }
 
-
 function resetHand(){
-	
+
 	for(ii=0; ii<YOUR_HAND.length; ii++){
 		YOUR_HAND[i].used = false;
 	}
@@ -250,6 +370,7 @@ function retireHand(){
 	addNumbersFromBag();
 	displayHand();
 }
+
 function clearClasses(){
 	for(ii=0; ii < YOUR_HAND.length; ii++){
 		$("#letter-" + (ii+1)).removeClass("letter-" + YOUR_HAND[ii].letter);
@@ -259,7 +380,7 @@ function clearClasses(){
 
 $(document).ready(function() {
 	startGame();
-	
+
 	$("#find-word-button").click(function() {
 		findWordToUse();
 	});
